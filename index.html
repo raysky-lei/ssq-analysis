@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SSQ 分析 - 双色球</title>
+<meta name="theme-color" content="#e94560">
+<meta name="description" content="双色球历史数据可视化工具（仅供数据分析娱乐，不构成任何投注建议）">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SSQ 数据">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<title>双色球历史数据分析</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #ffffff; color: #222; padding: 16px; }
@@ -320,6 +328,19 @@ function syncLengreSize() {
 window.addEventListener('resize', syncLengreSize);
 setTimeout(syncLengreSize, 200);
 
+
+<!-- PWA: Service Worker 注册 -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 </script>
+
+<!-- 免责声明 + 打赏入口 -->
+<div style="margin-top:24px;padding:14px;background:#fafafa;border:1px solid #eee;border-radius:8px;font-size:0.78rem;color:#555;line-height:1.7;">
+  <b>📌 数据来源</b>：<a href="http://data.17500.cn/ssq_asc.txt" style="color:#e94560;">17500.cn</a>（公开历史数据）<br>
+  <b>⚠️ 免责声明</b>：本工具仅展示历史数据的<b>统计规律</b>，<b>不构成任何投注建议</b>。彩票是均匀随机过程，长期期望值为负。所有方法的回测命中率均接近随机基线（详见 <code>data/test_results.json</code>）。请理性看待，量力而行。<br>
+  <b>💝 支持开发者</b>：如果觉得有用，欢迎 <a href="#" onclick="alert('微信/支付宝收款码待配置，请联系作者');return false;" style="color:#e94560;font-weight:bold;">打赏</a> 支持持续维护 ➜
+</div>
 </body>
 </html>

@@ -1,0 +1,27 @@
+{
+  "name": "双色球历史数据分析",
+  "short_name": "SSQ Stats",
+  "description": "双色球历史数据可视化：冷热分布、同尾规律、尾数统计（仅供数据分析娱乐）",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#e94560",
+  "lang": "zh-CN",
+  "categories": ["utilities", "education"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
