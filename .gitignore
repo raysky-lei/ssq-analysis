@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Backups
+*.bak
+*.backup_*
+.ssq_backup_*
+
+# Logs
+update.log
+
+# Data cache (regeneratable via fetcher.py)
+data/ssq_history.csv
+data/last_update.txt
+
+# Keep test_results.json (regression results worth committing)
+!data/test_results.json
