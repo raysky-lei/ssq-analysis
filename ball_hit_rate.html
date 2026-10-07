@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSQ · E. 球号命中率追踪</title>
+  <style>
+:root {
+  --bg: #f8fafc; --fg: #1e293b; --muted: #64748b;
+  --border: #e2e8f0; --card-bg: #ffffff;
+  --hit: #16a34a; --miss: #94a3b8; --blue: #2563eb;
+  --bar-hit: #16a34a; --bar-mid: #f59e0b; --bar-zero: #e2e8f0;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--fg);
+  margin: 0; padding: 24px;
+}
+.wrap { max-width: 1200px; margin: 0 auto; }
+h1 { margin: 0 0 4px; font-size: 1.6rem; }
+h2 { margin: 32px 0 12px; font-size: 1.15rem; color: #334155; }
+.subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+         gap: 12px; margin-bottom: 8px; }
+.card { background: var(--card-bg); border: 1px solid var(--border);
+        border-radius: 8px; padding: 14px 16px; }
+.card-label { color: var(--muted); font-size: 0.78rem; }
+.card-value { font-size: 1.7rem; font-weight: 600; margin: 4px 0; }
+.card-sub { color: var(--muted); font-size: 0.78rem; }
+table { width: 100%; border-collapse: collapse; background: var(--card-bg);
+        border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+th, td { padding: 10px 12px; text-align: left;
+         border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+th { background: #f1f5f9; color: #475569; font-weight: 500; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background: #f8fafc; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.num { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.balls { line-height: 1.4; }
+.ball { display: inline-block; min-width: 26px; padding: 2px 6px;
+        margin: 1px 2px; border-radius: 4px; font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.82rem; text-align: center; }
+.ball.hit { background: #dcfce7; color: #166534; font-weight: 600;
+            box-shadow: inset 0 0 0 1px #16a34a; }
+.ball.miss { background: #f1f5f9; color: var(--miss); }
+.blue { display: inline-block; min-width: 26px; padding: 2px 6px;
+        margin: 1px 2px; border-radius: 4px; font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.82rem; text-align: center; background: #dbeafe;
+        color: #1e40af; font-weight: 600; }
+.bar { font-family: ui-monospace, Menlo, monospace; font-size: 0.7rem;
+       letter-spacing: 0; color: var(--muted); margin-left: 4px; }
+.hits-hit { color: var(--hit); }
+.hits-mid { color: #d97706; }
+.hits-zero { color: var(--miss); }
+.dist { background: var(--card-bg); border: 1px solid var(--border);
+        border-radius: 8px; padding: 16px; }
+.dist-row { display: grid; grid-template-columns: 80px 1fr 100px;
+            align-items: center; gap: 12px; padding: 4px 0; }
+.dist-label { font-family: ui-monospace, Menlo, monospace; color: var(--muted); }
+.dist-bar { background: #f1f5f9; border-radius: 4px; height: 16px; overflow: hidden; }
+.dist-fill { display: block; height: 100%; transition: width 0.3s; }
+.dist-fill.bar-hit { background: var(--bar-hit); }
+.dist-fill.bar-mid { background: var(--bar-mid); }
+.dist-fill.bar-zero { background: var(--bar-zero); }
+.dist-count { font-family: ui-monospace, Menlo, monospace;
+              text-align: right; font-size: 0.85rem; }
+.footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+          color: var(--muted); font-size: 0.8rem; }
+.warn { background: #fef3c7; border-left: 3px solid #f59e0b;
+        padding: 10px 14px; border-radius: 4px; margin: 16px 0;
+        font-size: 0.85rem; color: #78350f; }
+.nav { font-size: 0.9rem; margin-bottom: 16px; }
+.nav a { color: var(--blue); text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="ssq_analysis.html">← 返回 SSQ 分析主页</a>
+    </div>
+    <h1>🎯 E. 具体球号推荐 · 命中率追踪</h1>
+    <div class="subtitle">
+      基于 walk-forward (用 rows[:i] 预测第 i 期) · top 30 期 vs 全量
+      · 数据截至 <span class="mono">2026114</span>
+      · 页面生成 2026-10-07 22:39:47
+    </div>
+
+    <div class="warn">
+      ⚠️ <b>诚实声明</b>: 双色球每期是独立均匀随机事件，理论红球命中率上限 ≈ 18.18% (10/33)。
+      本页用于结构化追踪，<b>不是</b>预测能力的证明。任何"超额收益"都需 walk-forward 检验。
+    </div>
+
+    <div class="cards">
+      
+<div class="card">
+  <div class="card-label">平均命中</div>
+  <div class="card-value" style="color:#0ea5e9">1.917</div>
+  <div class="card-sub">近 30 期: 1.800</div>
+</div>
+
+<div class="card">
+  <div class="card-label">红球命中率</div>
+  <div class="card-value" style="color:#10b981">31.94%</div>
+  <div class="card-sub">理论 ≈ 10/33×6 = 18.18%</div>
+</div>
+
+<div class="card">
+  <div class="card-label">≥1 命中概率</div>
+  <div class="card-value" style="color:#f59e0b">92.15%</div>
+  <div class="card-sub">近 30 期: 80.00%</div>
+</div>
+
+<div class="card">
+  <div class="card-label">≥2 命中概率</div>
+  <div class="card-value" style="color:#ef4444">64.12%</div>
+  <div class="card-sub">近 30 期: 60.00%</div>
+</div>
+
+<div class="card">
+  <div class="card-label">≥3 命中概率</div>
+  <div class="card-value" style="color:#8b5cf6">28.18%</div>
+  <div class="card-sub">近 30 期: 30.00%</div>
+</div>
+    </div>
+
+    <h2>📋 最近 30 期明细</h2>
+    <table>
+      
+<thead><tr>
+  <th style="width:90px;">期号</th>
+  <th style="width:110px;">日期</th>
+  <th>预测 (top 10, ✓=命中)</th>
+  <th>实际 (6 红球, 1 蓝球)</th>
+  <th style="width:90px;">命中数</th>
+</tr></thead>
+<tbody>
+
+<tr>
+  <td class="mono">2026114</td>
+  <td>2026-10-06</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball hit">07</span></td>
+  <td class="balls"><span class="ball hit">07</span><span class="ball hit">18</span><span class="ball miss">23</span><span class="ball miss">24</span><span class="ball miss">29</span><span class="ball miss">31</span><span class="blue">10</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026113</td>
+  <td>2026-09-29</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">03</span><span class="ball miss">04</span><span class="ball miss">20</span><span class="ball miss">24</span><span class="ball miss">29</span><span class="ball miss">30</span><span class="blue">11</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026112</td>
+  <td>2026-09-27</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball hit">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball hit">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">01</span><span class="ball miss">04</span><span class="ball miss">11</span><span class="ball miss">12</span><span class="ball hit">17</span><span class="ball miss">29</span><span class="blue">11</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026111</td>
+  <td>2026-09-24</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball hit">32</span><span class="ball hit">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball hit">07</span><span class="ball hit">14</span><span class="ball hit">22</span><span class="ball miss">31</span><span class="ball hit">32</span><span class="blue">05</span></td>
+  <td class="num hits-hit">5/6 <span class="bar">█████░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026110</td>
+  <td>2026-09-22</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball hit">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball hit">02</span><span class="ball hit">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">02</span><span class="ball miss">05</span><span class="ball miss">16</span><span class="ball miss">19</span><span class="ball hit">26</span><span class="ball hit">32</span><span class="blue">14</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026109</td>
+  <td>2026-09-20</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball hit">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">09</span><span class="ball miss">12</span><span class="ball miss">15</span><span class="ball hit">26</span><span class="ball miss">30</span><span class="ball miss">33</span><span class="blue">06</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026108</td>
+  <td>2026-09-17</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball miss">11</span><span class="ball miss">13</span><span class="ball hit">14</span><span class="ball miss">20</span><span class="ball miss">28</span><span class="blue">16</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026107</td>
+  <td>2026-09-15</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball hit">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball hit">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">01</span><span class="ball miss">05</span><span class="ball miss">09</span><span class="ball hit">17</span><span class="ball miss">24</span><span class="ball miss">33</span><span class="blue">04</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026106</td>
+  <td>2026-09-13</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball miss">11</span><span class="ball miss">13</span><span class="ball hit">14</span><span class="ball hit">22</span><span class="ball miss">30</span><span class="blue">14</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026105</td>
+  <td>2026-09-10</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball hit">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">02</span><span class="ball miss">04</span><span class="ball miss">13</span><span class="ball hit">14</span><span class="ball miss">15</span><span class="ball miss">30</span><span class="blue">08</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026104</td>
+  <td>2026-09-08</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">11</span><span class="ball miss">12</span><span class="ball miss">13</span><span class="ball miss">19</span><span class="ball miss">20</span><span class="ball miss">31</span><span class="blue">03</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026103</td>
+  <td>2026-09-06</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">04</span><span class="ball miss">11</span><span class="ball miss">20</span><span class="ball miss">27</span><span class="ball miss">28</span><span class="ball miss">30</span><span class="blue">15</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026102</td>
+  <td>2026-09-03</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">03</span><span class="ball miss">04</span><span class="ball miss">10</span><span class="ball miss">13</span><span class="ball miss">16</span><span class="ball miss">25</span><span class="blue">09</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026101</td>
+  <td>2026-09-01</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">05</span><span class="ball hit">06</span><span class="ball miss">08</span><span class="ball miss">09</span><span class="ball miss">24</span><span class="ball miss">25</span><span class="blue">12</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026100</td>
+  <td>2026-08-30</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">03</span><span class="ball miss">04</span><span class="ball miss">09</span><span class="ball miss">13</span><span class="ball hit">22</span><span class="ball miss">31</span><span class="blue">04</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026099</td>
+  <td>2026-08-27</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball miss">22</span><span class="ball hit">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">01</span><span class="ball miss">12</span><span class="ball hit">14</span><span class="ball hit">18</span><span class="ball miss">30</span><span class="ball miss">31</span><span class="blue">02</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026098</td>
+  <td>2026-08-25</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball hit">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">08</span><span class="ball miss">16</span><span class="ball hit">18</span><span class="ball hit">22</span><span class="ball miss">25</span><span class="ball hit">26</span><span class="blue">07</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026097</td>
+  <td>2026-08-23</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball hit">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">05</span><span class="ball miss">16</span><span class="ball miss">24</span><span class="ball hit">26</span><span class="ball miss">29</span><span class="ball miss">30</span><span class="blue">02</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026096</td>
+  <td>2026-08-20</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball hit">22</span><span class="ball hit">01</span><span class="ball hit">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">01</span><span class="ball miss">04</span><span class="ball miss">16</span><span class="ball hit">22</span><span class="ball hit">26</span><span class="ball miss">31</span><span class="blue">04</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026095</td>
+  <td>2026-08-18</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">04</span><span class="ball hit">06</span><span class="ball hit">14</span><span class="ball miss">21</span><span class="ball hit">22</span><span class="ball miss">33</span><span class="blue">16</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026094</td>
+  <td>2026-08-16</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball hit">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball miss">13</span><span class="ball miss">15</span><span class="ball hit">17</span><span class="ball miss">24</span><span class="ball miss">25</span><span class="blue">01</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026093</td>
+  <td>2026-08-13</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">05</span><span class="ball miss">08</span><span class="ball miss">15</span><span class="ball miss">20</span><span class="ball miss">21</span><span class="ball miss">24</span><span class="blue">09</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026092</td>
+  <td>2026-08-11</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">09</span><span class="ball miss">11</span><span class="ball miss">12</span><span class="ball miss">25</span><span class="ball miss">30</span><span class="ball miss">33</span><span class="blue">11</span></td>
+  <td class="num hits-zero">0/6 <span class="bar">░░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026091</td>
+  <td>2026-08-09</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball hit">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">02</span><span class="ball miss">13</span><span class="ball hit">14</span><span class="ball miss">16</span><span class="ball miss">20</span><span class="ball miss">24</span><span class="blue">05</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026090</td>
+  <td>2026-08-06</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball hit">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">02</span><span class="ball miss">04</span><span class="ball miss">15</span><span class="ball miss">23</span><span class="ball miss">25</span><span class="ball miss">27</span><span class="blue">03</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026089</td>
+  <td>2026-08-04</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">05</span><span class="ball hit">18</span><span class="ball miss">23</span><span class="ball miss">24</span><span class="ball miss">27</span><span class="ball miss">33</span><span class="blue">03</span></td>
+  <td class="num hits-mid">1/6 <span class="bar">█░░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026088</td>
+  <td>2026-08-02</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball hit">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball hit">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball hit">07</span><span class="ball miss">11</span><span class="ball hit">18</span><span class="ball hit">22</span><span class="ball miss">33</span><span class="blue">05</span></td>
+  <td class="num hits-hit">4/6 <span class="bar">████░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026087</td>
+  <td>2026-07-30</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball miss">17</span><span class="ball hit">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball miss">04</span><span class="ball hit">06</span><span class="ball miss">10</span><span class="ball hit">18</span><span class="ball miss">23</span><span class="ball miss">31</span><span class="blue">11</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026086</td>
+  <td>2026-07-28</td>
+  <td class="balls"><span class="ball hit">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball miss">06</span><span class="ball miss">17</span><span class="ball miss">18</span><span class="ball hit">02</span><span class="ball hit">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">02</span><span class="ball miss">05</span><span class="ball hit">14</span><span class="ball miss">25</span><span class="ball miss">30</span><span class="ball hit">32</span><span class="blue">05</span></td>
+  <td class="num hits-hit">3/6 <span class="bar">███░░░</span></td>
+</tr>
+
+<tr>
+  <td class="mono">2026085</td>
+  <td>2026-07-26</td>
+  <td class="balls"><span class="ball miss">14</span><span class="ball miss">22</span><span class="ball miss">01</span><span class="ball miss">26</span><span class="ball hit">06</span><span class="ball hit">17</span><span class="ball miss">18</span><span class="ball miss">02</span><span class="ball miss">32</span><span class="ball miss">07</span></td>
+  <td class="balls"><span class="ball hit">06</span><span class="ball miss">09</span><span class="ball miss">13</span><span class="ball hit">17</span><span class="ball miss">24</span><span class="ball miss">28</span><span class="blue">15</span></td>
+  <td class="num hits-mid">2/6 <span class="bar">██░░░░</span></td>
+</tr>
+</tbody>
+    </table>
+
+    <h2>📊 命中数分布（全量 3311 期）</h2>
+    <div class="dist">
+      
+<div class="dist-row">
+  <span class="dist-label">0 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-zero" style="width:21.8%"></span></span>
+  <span class="dist-count">260 (7.9%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">1 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-mid" style="width:78.0%"></span></span>
+  <span class="dist-count">928 (28.0%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">2 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-mid" style="width:100.0%"></span></span>
+  <span class="dist-count">1190 (35.9%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">3 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-hit" style="width:60.3%"></span></span>
+  <span class="dist-count">718 (21.7%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">4 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-hit" style="width:16.1%"></span></span>
+  <span class="dist-count">192 (5.8%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">5 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-hit" style="width:1.8%"></span></span>
+  <span class="dist-count">22 (0.7%)</span>
+</div>
+
+<div class="dist-row">
+  <span class="dist-label">6 命中</span>
+  <span class="dist-bar"><span class="dist-fill bar-hit" style="width:0.1%"></span></span>
+  <span class="dist-count">1 (0.0%)</span>
+</div>
+    </div>
+
+    <div class="footer">
+      追踪记录文件: <span class="mono">ball_hit_tracker.json</span>
+      · 全量 3311 期 (2004112 ~ 2026114)
+      · walk-forward 预热 200 期
+    </div>
+  </div>
+</body>
+</html>
